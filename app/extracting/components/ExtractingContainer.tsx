@@ -4,8 +4,8 @@ import React from 'react';
 import ExtractingAnimation from './ExtractingAnimation';
 import ExtractingStatus from './ExtractingStatus';
 import ExtractingProgressTracker from './ExtractingProgressTracker';
-import { useExtractionProcess } from '../../hooks';
-import { X } from 'lucide-react';
+import { useExtractionProcess, useAssessmentProgress } from '../../hooks';
+import { X, AlertTriangle, ArrowLeft } from 'lucide-react';
 
 export default function ExtractingContainer() {
   const { 
@@ -14,6 +14,35 @@ export default function ExtractingContainer() {
     progressPercentage,
     cancelExtraction 
   } = useExtractionProcess();
+
+  const { isError, error } = useAssessmentProgress();
+
+  if (isError) {
+    return (
+      <div className="w-full flex-1 flex flex-col items-center justify-center relative min-h-[580px] lg:min-h-[640px] px-4 py-8">
+        <div className="max-w-md w-full bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-red-100 flex flex-col items-center text-center">
+          <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mb-4">
+            <AlertTriangle size={28} />
+          </div>
+          <h2 className="font-bold text-xl sm:text-2xl text-gray-900 mb-2">
+            Assessment Failed
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-600 mb-6 bg-red-50/80 p-3.5 rounded-xl border border-red-100 text-left font-mono break-words w-full">
+            {error || "An unknown error occurred while processing the document."}
+          </p>
+          <div className="flex gap-3 w-full">
+            <button
+              onClick={cancelExtraction}
+              className="flex-1 py-3 px-4 rounded-xl border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <ArrowLeft size={16} />
+              <span>Back to Upload</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex-1 flex flex-col items-center justify-center relative min-h-[580px] lg:min-h-[640px] px-2 py-4">

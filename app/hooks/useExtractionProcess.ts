@@ -62,6 +62,7 @@ export function useExtractionProcess() {
     progressPercentage,
     updateProgress,
     setStatus,
+    failAssessment,
     resetProgress,
   } = useAssessmentProgress();
   const { setResults } = useAssessmentResults();
@@ -75,8 +76,13 @@ export function useExtractionProcess() {
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [isCancelled, setIsCancelled] = useState(false);
   const isStartedRef = useRef(false);
+  const isFetchingRef = useRef(false);
+  const isCancelledRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const startPipeline = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     let activeStage = 0;
 
     // Advance UI animation smoothly up to stage 4 (92%)
@@ -91,10 +97,16 @@ export function useExtractionProcess() {
       }
     }, 1400);
 
+    let isTimeoutAborted = false;
+
     try {
       // Allow up to 180s for high-accuracy multimodal model generation
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 180000);
+      abortControllerRef.current = controller;
+      const timeoutId = setTimeout(() => {
+        isTimeoutAborted = true;
+        controller.abort();
+      }, 180000);
 
       const response = await fetch("/api/assess", {
         method: "POST",
@@ -108,9 +120,6 @@ export function useExtractionProcess() {
           answerSheetTexts,
         }),
         signal: controller.signal,
-      }).catch((err) => {
-        console.warn("Network or server error calling /api/assess:", err);
-        return null;
       });
 
       clearTimeout(timeoutId);
@@ -124,49 +133,61 @@ export function useExtractionProcess() {
           realAssessmentData.questions.length > 0
         ) {
           setResults(realAssessmentData);
+
+          // Finish progress animation to 100%
+          setCurrentStageIndex(4);
+          updateProgress("Extraction complete!", 100);
+          setStatus("completed");
+
+          // Navigate to results
+          setTimeout(() => {
+            router.push("/results");
+            // Fallback hard navigation if soft navigation fails or hangs
+            setTimeout(() => {
+              if (window.location.pathname !== "/results") {
+                window.location.href = "/results";
+              }
+            }, 800);
+          }, 400);
+          return;
         } else {
           console.warn("API returned empty questions");
+          failAssessment(
+            "Could not extract questions or answers from the provided documents. Please check your uploaded files.",
+          );
+          return;
         }
       } else {
-        console.warn("API returned non-OK status:", response?.status);
+        const errJson = response ? await response.json().catch(() => ({})) : {};
+        const errorMsg =
+          errJson.error ||
+          `API error (Status ${response?.status || "Unknown"}). Please verify API keys.`;
+        console.warn("API returned non-OK status:", response?.status, errorMsg);
+        failAssessment(errorMsg);
+        return;
       }
-
-      // Finish progress animation to 100%
-      setCurrentStageIndex(4);
-      updateProgress("Extraction complete!", 100);
-      setStatus("completed");
-
-      // Navigate to results
-      setTimeout(() => {
-        router.push("/results");
-        // Fallback hard navigation if soft navigation fails or hangs
-        setTimeout(() => {
-          if (window.location.pathname !== "/results") {
-            window.location.href = "/results";
-          }
-        }, 800);
-      }, 400);
-    } catch (err) {
-      console.error("Error during extraction pipeline:", err);
+    } catch (err: any) {
       clearInterval(progressTimer);
-
-      setCurrentStageIndex(4);
-      updateProgress("Extraction complete!", 100);
-      setStatus("completed");
-
-      setTimeout(() => {
-        router.push("/results");
-        setTimeout(() => {
-          if (window.location.pathname !== "/results") {
-            window.location.href = "/results";
-          }
-        }, 800);
-      }, 400);
+      if (err?.name === "AbortError") {
+        if (isCancelledRef.current) {
+          console.log("Assessment fetch cancelled by user.");
+          return;
+        }
+        if (isTimeoutAborted) {
+          failAssessment("Assessment request timed out after 180 seconds.");
+          return;
+        }
+        console.warn("Transient fetch abort detected, ignoring false-positive error:", err);
+        return;
+      }
+      console.error("Error during extraction pipeline:", err);
+      failAssessment(err?.message || "An unexpected error occurred during extraction.");
     }
   }, [
     router,
     updateProgress,
     setStatus,
+    failAssessment,
     setResults,
     questionPaperPages,
     answerSheetPages,
@@ -182,7 +203,11 @@ export function useExtractionProcess() {
   }, [startPipeline]);
 
   const cancelExtraction = useCallback(() => {
+    isCancelledRef.current = true;
     setIsCancelled(true);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     resetProgress();
     router.push("/");
   }, [resetProgress, router]);

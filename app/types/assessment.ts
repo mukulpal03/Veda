@@ -83,6 +83,8 @@ export interface AssessmentResult {
   summary?: OverallGradingSummary;
   totalPages?: number;
   processedAt: string;
+  isVisionFallback?: boolean;
+  warningMessage?: string;
 }
 
 export type AssessmentStatus = 'idle' | 'uploading' | 'processing' | 'completed' | 'error';

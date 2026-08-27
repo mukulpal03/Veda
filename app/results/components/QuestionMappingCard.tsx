@@ -155,7 +155,10 @@ export default function QuestionMappingCard({
               AI Feedback
             </span>
             <p className="text-xs text-[#525252] leading-relaxed">
-              {answer.feedback || 'Answer evaluated and mapped successfully.'}
+              {answer.feedback ||
+                (answer.evaluationStatus === 'UNANSWERED' || !answer.isAnswered || !answer.studentAnswerText?.trim()
+                  ? 'You did not attempt this question. Be mindful to answer all questions in future assessments!'
+                  : 'Answer evaluated and mapped successfully.')}
             </p>
           </div>
         </div>
