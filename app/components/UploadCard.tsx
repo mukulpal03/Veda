@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useRef } from 'react';
-import { Upload, X } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Upload, X, FileText, ImageIcon } from 'lucide-react';
 
 interface UploadCardProps {
   titlePrefix: string;
@@ -9,6 +9,7 @@ interface UploadCardProps {
   file: File | null;
   onFileSelect: (file: File) => void;
   onRemove: () => void;
+  acceptTypes?: string;
 }
 
 export default function UploadCard({ 
@@ -16,9 +17,12 @@ export default function UploadCard({
   titleHighlight, 
   file, 
   onFileSelect, 
-  onRemove 
+  onRemove,
+  acceptTypes = ".pdf,image/png,image/jpeg,image/jpg,image/webp"
 }: UploadCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleClick = () => {
     if (!file) {
@@ -26,14 +30,44 @@ export default function UploadCard({
     }
   };
 
+  const validateAndSelect = (selectedFile: File) => {
+    setErrorMsg(null);
+    if (selectedFile.size > 15 * 1024 * 1024) {
+      setErrorMsg('File exceeds 15MB limit');
+      return;
+    }
+    onFileSelect(selectedFile);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      onFileSelect(selectedFile);
+      validateAndSelect(selectedFile);
     }
-    // Reset input so the same file can be uploaded again if removed
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      validateAndSelect(droppedFile);
     }
   };
 
@@ -42,14 +76,23 @@ export default function UploadCard({
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(0)) + sizes[i];
   };
+
+  const isPDF = file?.type === 'application/pdf' || file?.name.toLowerCase().endsWith('.pdf');
 
   return (
     <div 
       onClick={handleClick}
-      className={`flex-1 min-w-0 w-full h-[180px] lg:h-[240px] bg-white border-2 border-dashed border-gray-200 rounded-[30px] lg:rounded-[40px] p-6 lg:p-10 flex flex-col items-center justify-center transition-all shadow-sm relative ${
-        !file ? 'cursor-pointer hover:border-[#E96A44]/50 hover:bg-[#FFF6F4]' : ''
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`group flex-1 min-w-0 w-full h-[180px] lg:h-[200px] bg-white border-2 border-dashed rounded-[24px] lg:rounded-[28px] p-4 lg:p-6 flex flex-col items-center justify-center transition-all duration-200 shadow-xs relative select-none ${
+        file 
+          ? 'border-[#D9D9D9] cursor-default' 
+          : isDragging 
+            ? 'border-[#FF5623] bg-[#FFF5F0] ring-4 ring-[#FF5623]/15 scale-[1.01] cursor-copy' 
+            : 'border-[#D9D9D9] hover:border-[#FF5623]/70 hover:bg-[#FFFBF9] cursor-pointer'
       }`}
     >
       <input 
@@ -57,47 +100,70 @@ export default function UploadCard({
         ref={fileInputRef} 
         onChange={handleFileChange} 
         className="hidden" 
-        accept=".pdf"
+        accept={acceptTypes}
       />
 
       {file ? (
-        // Uploaded State
-        <div className="w-full bg-[#F6F6F6] rounded-[24px] p-5 flex items-center justify-center gap-4 relative">
-          {/* PDF Icon */}
-          <div className="bg-[#EB4C4C] text-white w-10 h-12 rounded-lg rounded-tr-2xl flex items-end pb-1 justify-center flex-shrink-0 relative">
-             {/* Folded corner illusion */}
-             <div className="absolute top-0 right-0 w-3 h-3 bg-white/30 rounded-bl-lg"></div>
-             <span className="text-[10px] font-bold tracking-wider">PDF</span>
-          </div>
+        // Uploaded State matching actual Figma design Image 1
+        <div className="relative bg-[#FAFAFA] border border-[#EEEEEE] rounded-[18px] p-3 px-4 flex items-center gap-3.5 shadow-xs max-w-[90%]">
+          {/* File Icon Badge */}
+          {isPDF ? (
+            <div className="w-9 h-11 bg-[#FF4B4B] text-white rounded-md flex flex-col items-center justify-center shrink-0 shadow-2xs">
+              <FileText size={14} className="mb-0.5 opacity-90" />
+              <span className="text-[9px] font-black tracking-wider leading-none">PDF</span>
+            </div>
+          ) : (
+            <div className="w-9 h-11 bg-[#3B82F6] text-white rounded-md flex flex-col items-center justify-center shrink-0 shadow-2xs">
+              <ImageIcon size={14} className="mb-0.5 opacity-90" />
+              <span className="text-[9px] font-black tracking-wider leading-none">IMG</span>
+            </div>
+          )}
           
-          {/* File Info */}
+          {/* File Details */}
           <div className="flex flex-col items-start min-w-0 pr-2">
-            <span className="text-gray-900 font-bold text-[15px] truncate max-w-[200px]">{file.name}</span>
-            <span className="text-gray-500 text-xs font-medium mt-0.5">{formatFileSize(file.size)} • 2 Pages</span>
+            <span className="text-[#1E1E1E] font-bold text-xs sm:text-[13px] truncate max-w-[160px] sm:max-w-[200px]">
+              {file.name}
+            </span>
+            <div className="flex items-center gap-1.5 text-[11px] text-[#7A7A7A] font-medium mt-0.5">
+              <span>{formatFileSize(file.size)}</span>
+              <span>•</span>
+              <span>2 Pages</span>
+            </div>
           </div>
 
-          {/* Remove Button */}
+          {/* Remove (x) Button placed at top-right corner of pill */}
           <button 
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               onRemove();
             }}
-            className="absolute -top-3 -right-3 bg-[#545454] hover:bg-[#2C2C2C] text-white rounded-full p-1.5 transition-colors border-[3px] border-white shadow-sm"
+            title="Remove file"
+            className="absolute -top-2.5 -right-2.5 bg-[#4A4A4A] hover:bg-[#1E1E1E] text-white rounded-full w-5 h-5 flex items-center justify-center transition-all shrink-0 shadow-sm hover:scale-110 active:scale-95 cursor-pointer"
           >
-            <X size={14} strokeWidth={2.5} />
+            <X size={11} strokeWidth={3} />
           </button>
         </div>
       ) : (
-        // Empty State
-        <>
-          <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-6 text-gray-700">
-            <Upload size={24} strokeWidth={2} />
+        // Empty State matching actual Figma design Image 1
+        <div className="flex flex-col items-center justify-center text-center">
+          {/* Upload Circle Icon */}
+          <div className="w-10 h-10 bg-[#F5F5F5] group-hover:bg-[#FFF0EB] text-[#4A4A4A] group-hover:text-[#FF5623] rounded-full flex items-center justify-center mb-2.5 transition-colors duration-200">
+            <Upload size={18} strokeWidth={2} />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">
-            {titlePrefix} <span className="text-[#E96A44]">{titleHighlight}</span>
+
+          <h3 className="text-[14px] lg:text-[15px] font-bold text-[#1E1E1E] mb-1">
+            {titlePrefix} <span className="text-[#FF5623]">{titleHighlight}</span>
           </h3>
-          <p className="text-sm text-gray-400 font-medium">Max 10MB</p>
-        </>
+
+          <p className="text-[11px] text-[#8E8E8E] font-medium">
+            {errorMsg ? (
+              <span className="text-red-500 font-semibold">{errorMsg}</span>
+            ) : (
+              'PDF or Images • Max 15MB'
+            )}
+          </p>
+        </div>
       )}
     </div>
   );

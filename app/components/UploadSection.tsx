@@ -1,82 +1,120 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import UploadCard from './UploadCard';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import Image from 'next/image';
+import { useDocumentUpload, useAssessmentProgress } from '../hooks';
 
 export default function UploadSection() {
   const router = useRouter();
-  const [questionPaperFile, setQuestionPaperFile] = useState<File | null>(null);
-  const [answerSheetFile, setAnswerSheetFile] = useState<File | null>(null);
-
-  const isReady = questionPaperFile && answerSheetFile;
+  const { 
+    questionPaperFile, 
+    setQuestionPaperFile, 
+    answerSheetFile, 
+    setAnswerSheetFile,
+    removeQuestionPaper,
+    removeAnswerSheet,
+    isUploadReady 
+  } = useDocumentUpload();
+  const { startAssessment } = useAssessmentProgress();
 
   const handleStartMapping = () => {
-    if (isReady) {
+    if (isUploadReady) {
+      startAssessment();
       router.push('/extracting');
     }
   };
 
+  const handleLoadSampleFiles = () => {
+    const sampleQP = new File(["Sample Question Paper Content"], "Class_10_maths_unit_test.pdf", { type: "application/pdf" });
+    const sampleAS = new File(["Sample Student Answer Sheet Content"], "student_1_answer_sheet.pdf", { type: "application/pdf" });
+    setQuestionPaperFile(sampleQP);
+    setAnswerSheetFile(sampleAS);
+  };
+
   return (
-    <div className="w-full lg:w-[1103px] h-auto lg:min-h-[694px] flex flex-col items-center pt-[30px] lg:pt-[50px] pb-[20px] lg:pb-[40px] px-4 lg:px-8 overflow-visible z-10 relative gap-6 lg:gap-[36px]">
-      {/* Headings */}
-      <div className="text-center px-2">
-        <h1 className="font-[family-name:var(--font-bricolage)] font-bold text-3xl lg:text-[40px] leading-[1.2] tracking-[-0.04em] text-[#2B2B2B] align-middle mb-2">
-          Upload <span className="text-[#FF5623] border-b-[3px] lg:border-b-4 border-[#FCD2C6] pb-1 block lg:inline">Question Paper & Answer Sheets</span>
+    <div className="w-full flex-1 flex flex-col items-center justify-center relative min-h-[580px] lg:min-h-[640px] px-2 py-4">
+      
+      {/* Top Heading Area - All in One Line */}
+      <div className="text-center max-w-3xl mb-4">
+        <h1 className="font-[family-name:var(--font-bricolage)] font-bold text-2xl sm:text-3xl lg:text-[34px] leading-tight text-[#1E1E1E] flex items-center justify-center gap-2 flex-wrap text-center">
+          <span>Upload</span>
+          <span className="bg-[#FFE5DC] text-[#FF5623] px-3.5 py-0.5 rounded-xl inline-block">
+            Question Paper &amp; Answer Sheets
+          </span>
         </h1>
-        <p className="text-gray-500 font-medium text-base lg:text-lg mt-4">Upload both files to get started</p>
+        <p className="text-[#7A7A7A] font-medium text-xs sm:text-sm mt-2">
+          Upload both files to get started
+        </p>
       </div>
 
-      {/* Center Illustration */}
-      <div className="relative flex items-center justify-center transform scale-90 lg:scale-100">
-        <div className="w-[120px] h-[120px] lg:w-[140px] lg:h-[140px] flex items-center justify-center relative">
+      {/* Center 3D Teacher Avatar Illustration with Ambient Halo */}
+      <div className="relative my-4 flex items-center justify-center">
+        {/* Soft Ambient Rings */}
+        <div className="absolute w-[150px] h-[150px] rounded-full border border-orange-200/50 -z-10 animate-pulse" />
+        <div className="w-[110px] h-[110px] sm:w-[125px] sm:h-[125px] rounded-full bg-gradient-to-b from-[#FFF5F0] to-[#FFE8DE] border-[3px] border-[#FFDFD3] flex items-center justify-center relative shadow-[0_8px_20px_rgba(255,86,35,0.12)] overflow-hidden">
           <Image 
             src="/fdadf59d77be69f6cf33cea431ae7b6872c093fe.png" 
-            alt="Illustration" 
-            width={139} 
-            height={139}
-            className="object-contain"
+            alt="AI Assessment Teacher" 
+            width={125} 
+            height={125}
+            priority
+            className="object-cover object-top scale-110 translate-y-1"
           />
         </div>
       </div>
 
-      {/* Upload Cards */}
-      <div className="flex flex-col lg:flex-row gap-6 w-full bg-white/40 p-4 rounded-[30px] lg:rounded-[40px]">
+      {/* Upload Dropzones Container - Blended with background */}
+      <div className="w-full max-w-[800px] bg-white/40 backdrop-blur-xs border border-white/80 rounded-[28px] lg:rounded-[32px] p-3 sm:p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 shadow-xs my-2">
         <UploadCard 
           titlePrefix="Upload" 
           titleHighlight="Question Paper" 
           file={questionPaperFile}
           onFileSelect={(file) => setQuestionPaperFile(file)}
-          onRemove={() => setQuestionPaperFile(null)}
+          onRemove={removeQuestionPaper}
         />
         <UploadCard 
           titlePrefix="Upload" 
           titleHighlight="Answer Sheet" 
           file={answerSheetFile}
           onFileSelect={(file) => setAnswerSheetFile(file)}
-          onRemove={() => setAnswerSheetFile(null)}
+          onRemove={removeAnswerSheet}
         />
       </div>
 
-      {/* Footer Actions */}
-      <div className="text-center">
+      {/* Bottom CTA Actions */}
+      <div className="text-center mt-4 flex flex-col items-center">
         <button 
           onClick={handleStartMapping}
-          disabled={!isReady}
+          disabled={!isUploadReady}
           className={`${
-            isReady 
-              ? 'bg-[#2C2C2C] text-white cursor-pointer hover:bg-black' 
-              : 'bg-[#AFAFAF] text-white cursor-not-allowed opacity-80'
-          } px-8 py-3 rounded-full font-semibold flex items-center justify-center gap-2 mx-auto mb-4 transition-colors`}
+            isUploadReady 
+              ? 'bg-[#242424] text-white hover:bg-black cursor-pointer shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]' 
+              : 'bg-[#C5C5C5] text-white cursor-not-allowed opacity-90'
+          } px-8 py-3 rounded-full font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200`}
         >
-          Start Mapping <ArrowRight size={18} />
+          Start Mapping <ArrowRight size={16} strokeWidth={2} />
         </button>
-        <p className="text-sm text-gray-400 font-medium">
-          Once both files are uploaded, you'll able to map answers with questions
+
+        <p className="text-[11px] sm:text-xs text-[#8C8C8C] font-medium mt-2.5">
+          Once both files are uploaded, you&apos;ll able to map answers with questions
         </p>
+
+        {/* Quick Sample Files Button */}
+        {!isUploadReady && (
+          <button
+            type="button"
+            onClick={handleLoadSampleFiles}
+            className="mt-2.5 text-xs text-[#FF5623] hover:text-[#e04513] font-semibold flex items-center gap-1.5 underline underline-offset-4 decoration-[#FF5623]/30 hover:decoration-[#FF5623] transition-colors cursor-pointer"
+          >
+            <Sparkles size={12} />
+            Try with sample assessment files
+          </button>
+        )}
       </div>
+
     </div>
   );
 }
