@@ -1,14 +1,18 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import QuestionMappingList from './QuestionMappingList';
 import DocumentViewer from './DocumentViewer';
-import { useAssessmentResults } from '../../hooks';
+import { useAssessmentResults, useDocumentUpload, useAssessment } from '../../hooks';
 import { ListChecks, FileText, FileSpreadsheet, Upload, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ResultsContainer() {
+  const router = useRouter();
   const { results, selectedQuestionId, selectQuestion } = useAssessmentResults();
+  const { clearAllDocuments, resetAssessment } = useAssessment();
+  const { answerSheetPages } = useDocumentUpload();
   const [mobileTab, setMobileTab] = useState<'questions' | 'document'>('questions');
 
   if (!results || !results.questions || results.questions.length === 0) {
@@ -34,7 +38,8 @@ export default function ResultsContainer() {
     );
   }
 
-  const { questions, answers, totalPages = 4 } = results;
+  const { questions, answers } = results;
+  const totalPages = results.totalPages || answerSheetPages?.length || 1;
 
   // Initialize selected question to first question in results if none selected
   const activeQuestionId = selectedQuestionId || questions[0]?.id || 'q1';
@@ -53,30 +58,30 @@ export default function ResultsContainer() {
       )}
       
       {/* Mobile Tab Switcher (Visible only on mobile/tablet < lg) */}
-      <div className="flex lg:hidden items-center bg-gray-100 p-1 rounded-2xl mb-3 shrink-0">
-        <button
-          onClick={() => setMobileTab('questions')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-xl transition-all ${
-            mobileTab === 'questions'
-              ? 'bg-white text-gray-900 shadow-xs'
-              : 'text-gray-500 hover:text-gray-900'
-          }`}
-        >
-          <ListChecks size={15} className="text-[#FF5623]" />
-          <span>Extracted Questions ({questions.length})</span>
-        </button>
+      <div className="flex lg:hidden items-center justify-center w-full mb-3 shrink-0">
+        <div className="flex items-center w-full max-w-[360px] bg-white border border-gray-200/80 p-1 rounded-full shadow-xs">
+          <button
+            onClick={() => setMobileTab('questions')}
+            className={`flex-1 py-2 text-center text-sm rounded-full transition-all duration-200 cursor-pointer ${
+              mobileTab === 'questions'
+                ? 'bg-[#272727] text-white shadow-[0_2px_8px_rgba(0,0,0,0.18)] font-semibold'
+                : 'text-[#272727] hover:text-black font-medium'
+            }`}
+          >
+            Questions
+          </button>
 
-        <button
-          onClick={() => setMobileTab('document')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-xl transition-all ${
-            mobileTab === 'document'
-              ? 'bg-white text-gray-900 shadow-xs'
-              : 'text-gray-500 hover:text-gray-900'
-          }`}
-        >
-          <FileText size={15} className="text-[#FF5623]" />
-          <span>Answer Sheet ({totalPages} Pgs)</span>
-        </button>
+          <button
+            onClick={() => setMobileTab('document')}
+            className={`flex-1 py-2 text-center text-sm rounded-full transition-all duration-200 cursor-pointer ${
+              mobileTab === 'document'
+                ? 'bg-[#272727] text-white shadow-[0_2px_8px_rgba(0,0,0,0.18)] font-semibold'
+                : 'text-[#272727] hover:text-black font-medium'
+            }`}
+          >
+            Answer Sheet
+          </button>
+        </div>
       </div>
 
       {/* Main Split Screen Area */}

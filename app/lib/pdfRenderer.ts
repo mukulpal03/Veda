@@ -9,6 +9,37 @@ export interface ProcessedDocumentResult {
   pageTexts: string[];
 }
 
+export function formatFileSize(bytes: number): string {
+  if (bytes === undefined || bytes === null || isNaN(bytes) || bytes <= 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+  const val = bytes / Math.pow(k, i);
+  const formatted = i === 0 ? Math.round(val).toString() : val.toFixed(1).replace(/\.0$/, '');
+  return `${formatted} ${sizes[i]}`;
+}
+
+/**
+ * Rapidly retrieves the total page count of any uploaded document without full canvas rendering.
+ * For images, returns 1. For PDFs, loads document metadata to read numPages.
+ */
+export async function getDocumentPageCount(file: File): Promise<number> {
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  if (!isPdf) {
+    return 1;
+  }
+  try {
+    const pdfjs = await getPdfJs();
+    const arrayBuffer = await file.arrayBuffer();
+    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) });
+    const pdf = await loadingTask.promise;
+    return pdf.numPages || 1;
+  } catch (err) {
+    console.warn('Could not extract PDF page count:', err);
+    return 1;
+  }
+}
+
 /**
  * Configure PDF.js worker dynamically in browser environment
  */

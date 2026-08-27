@@ -15,7 +15,12 @@ import { useAssessmentResults, useAssessment } from '../../hooks';
 export default function ResultsHeader() {
   const router = useRouter();
   const { results } = useAssessmentResults();
-  const { resetAssessment } = useAssessment();
+  const { resetAssessment, clearAllDocuments } = useAssessment();
+
+  const handleBackToUpload = () => {
+    clearAllDocuments();
+    router.push('/');
+  };
 
   const handleStartNew = () => {
     resetAssessment();
@@ -46,7 +51,7 @@ export default function ResultsHeader() {
       {/* Left side: Back button & Assessment Title */}
       <div className="flex items-center gap-3 min-w-0">
         <button
-          onClick={() => router.push('/')}
+          onClick={handleBackToUpload}
           className="p-2 hover:bg-gray-100 rounded-full text-gray-500 hover:text-gray-900 transition-colors cursor-pointer shrink-0"
           title="Back to Upload"
         >

@@ -30,28 +30,6 @@ export default function ExtractingProgressTracker({
         <span>Step {currentStageIndex + 1} of {EXTRACTION_STAGES.length}</span>
         <span className="text-[#FF5623] font-bold">{progressPercentage}%</span>
       </div>
-
-      {/* Mini Step Bubbles */}
-      <div className="flex items-center justify-center gap-2 mt-1">
-        {EXTRACTION_STAGES.map((stage, idx) => {
-          const isDone = idx < currentStageIndex;
-          const isCurrent = idx === currentStageIndex;
-
-          return (
-            <div 
-              key={stage.id} 
-              title={stage.label}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                isDone 
-                  ? 'bg-emerald-500 scale-100' 
-                  : isCurrent 
-                    ? 'bg-[#FF5623] scale-125 ring-2 ring-[#FF5623]/25' 
-                    : 'bg-[#E0E0E0] scale-90'
-              }`}
-            />
-          );
-        })}
-      </div>
     </div>
   );
 }

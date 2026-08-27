@@ -7,6 +7,7 @@ interface UploadCardProps {
   titlePrefix: string;
   titleHighlight: string;
   file: File | null;
+  pageCount?: number;
   onFileSelect: (file: File) => void;
   onRemove: () => void;
   acceptTypes?: string;
@@ -16,6 +17,7 @@ export default function UploadCard({
   titlePrefix, 
   titleHighlight, 
   file, 
+  pageCount,
   onFileSelect, 
   onRemove,
   acceptTypes = ".pdf,image/png,image/jpeg,image/jpg,image/webp"
@@ -23,6 +25,57 @@ export default function UploadCard({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [internalPageCount, setInternalPageCount] = useState<number | null>(null);
+  const [isCalculatingPages, setIsCalculatingPages] = useState<boolean>(false);
+
+  const isPDF = file ? (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) : false;
+
+  // Dynamically resolve actual page count for uploaded files
+  React.useEffect(() => {
+    if (!file) {
+      setInternalPageCount(null);
+      setIsCalculatingPages(false);
+      return;
+    }
+
+    // If explicit page count passed and positive, use it
+    if (typeof pageCount === 'number' && pageCount > 0) {
+      setInternalPageCount(pageCount);
+      setIsCalculatingPages(false);
+      return;
+    }
+
+    // Images are always 1 single page
+    if (!isPDF) {
+      setInternalPageCount(1);
+      setIsCalculatingPages(false);
+      return;
+    }
+
+    // PDF files: fetch actual page count using PDF.js metadata
+    let isMounted = true;
+    setIsCalculatingPages(true);
+
+    import('../lib/pdfRenderer')
+      .then(({ getDocumentPageCount }) => getDocumentPageCount(file))
+      .then((count) => {
+        if (isMounted) {
+          setInternalPageCount(count);
+          setIsCalculatingPages(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not determine PDF page count:', err);
+        if (isMounted) {
+          setInternalPageCount(1);
+          setIsCalculatingPages(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [file, pageCount, isPDF]);
 
   const handleClick = () => {
     if (!file) {
@@ -72,14 +125,16 @@ export default function UploadCard({
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === undefined || bytes === null || isNaN(bytes) || bytes <= 0) return '0 B';
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(0)) + sizes[i];
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+    const val = bytes / Math.pow(k, i);
+    const formatted = i === 0 ? Math.round(val).toString() : val.toFixed(1).replace(/\.0$/, '');
+    return `${formatted} ${sizes[i]}`;
   };
 
-  const isPDF = file?.type === 'application/pdf' || file?.name.toLowerCase().endsWith('.pdf');
+  const resolvedPages = internalPageCount ?? (typeof pageCount === 'number' && pageCount > 0 ? pageCount : null);
 
   return (
     <div 
@@ -104,7 +159,7 @@ export default function UploadCard({
       />
 
       {file ? (
-        // Uploaded State matching actual Figma design Image 1
+        // Uploaded State matching actual design
         <div className="relative bg-[#FAFAFA] border border-[#EEEEEE] rounded-[18px] p-3 px-4 flex items-center gap-3.5 shadow-xs max-w-[90%]">
           {/* File Icon Badge */}
           {isPDF ? (
@@ -127,7 +182,15 @@ export default function UploadCard({
             <div className="flex items-center gap-1.5 text-[11px] text-[#7A7A7A] font-medium mt-0.5">
               <span>{formatFileSize(file.size)}</span>
               <span>•</span>
-              <span>2 Pages</span>
+              {isCalculatingPages && resolvedPages === null ? (
+                <span className="animate-pulse text-[#FF5623]">Reading pages...</span>
+              ) : (
+                <span>
+                  {resolvedPages !== null
+                    ? `${resolvedPages} ${resolvedPages === 1 ? 'Page' : 'Pages'}`
+                    : (isPDF ? 'PDF' : '1 Page')}
+                </span>
+              )}
             </div>
           </div>
 
@@ -147,12 +210,32 @@ export default function UploadCard({
       ) : (
         // Empty State matching actual Figma design Image 1
         <div className="flex flex-col items-center justify-center text-center">
-          {/* Upload Circle Icon */}
-          <div className="w-10 h-10 bg-[#F5F5F5] group-hover:bg-[#FFF0EB] text-[#4A4A4A] group-hover:text-[#FF5623] rounded-full flex items-center justify-center mb-2.5 transition-colors duration-200">
-            <Upload size={18} strokeWidth={2} />
+          {/* Upload Icon Container */}
+          <div 
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '8px',
+              padding: '4px',
+              gap: '10px',
+              backgroundColor: '#F3F3F3',
+            }}
+            className="group-hover:bg-[#FFF0EB] text-[#4A4A4A] group-hover:text-[#FF5623] flex items-center justify-center mb-2.5 transition-colors duration-200"
+          >
+            <Upload size={20} strokeWidth={2} />
           </div>
 
-          <h3 className="text-[14px] lg:text-[15px] font-bold text-[#1E1E1E] mb-1">
+          <h3 
+            style={{ 
+              fontFamily: 'var(--font-bricolage), sans-serif',
+              fontWeight: 600,
+              fontSize: '20px',
+              lineHeight: '22px',
+              letterSpacing: '-0.06em',
+              verticalAlign: 'middle',
+            }}
+            className="text-[#1E1E1E] mb-1"
+          >
             {titlePrefix} <span className="text-[#FF5623]">{titleHighlight}</span>
           </h3>
 

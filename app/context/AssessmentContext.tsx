@@ -53,12 +53,18 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
         const docResult = await processUploadedDocumentWithText(file);
         setQuestionPaperPages(docResult.pageImageUrls);
         setQuestionPaperTexts(docResult.pageTexts);
+        try {
+          sessionStorage.setItem('veda_question_paper_pages', JSON.stringify(docResult.pageImageUrls));
+        } catch {}
       } catch (err) {
         console.warn('Could not extract question paper pages preview:', err);
       }
     } else {
       setQuestionPaperPages([]);
       setQuestionPaperTexts([]);
+      try {
+        sessionStorage.removeItem('veda_question_paper_pages');
+      } catch {}
     }
   }, []);
 
@@ -70,12 +76,18 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
         const docResult = await processUploadedDocumentWithText(file);
         setAnswerSheetPages(docResult.pageImageUrls);
         setAnswerSheetTexts(docResult.pageTexts);
+        try {
+          sessionStorage.setItem('veda_answer_sheet_pages', JSON.stringify(docResult.pageImageUrls));
+        } catch {}
       } catch (err) {
         console.warn('Could not extract answer sheet pages preview:', err);
       }
     } else {
       setAnswerSheetPages([]);
       setAnswerSheetTexts([]);
+      try {
+        sessionStorage.removeItem('veda_answer_sheet_pages');
+      } catch {}
     }
   }, []);
 
@@ -83,12 +95,18 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
     setQuestionPaperFile(null);
     setQuestionPaperPages([]);
     setQuestionPaperTexts([]);
+    try {
+      sessionStorage.removeItem('veda_question_paper_pages');
+    } catch {}
   }, []);
 
   const removeAnswerSheet = useCallback(() => {
     setAnswerSheetFile(null);
     setAnswerSheetPages([]);
     setAnswerSheetTexts([]);
+    try {
+      sessionStorage.removeItem('veda_answer_sheet_pages');
+    } catch {}
   }, []);
 
   const clearAllDocuments = useCallback(() => {
@@ -127,8 +145,16 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
     setResults(newResults);
     if (newResults && newResults.questions.length > 0) {
       setSelectedQuestionId((prev) => prev || newResults.questions[0].id);
+      try {
+        sessionStorage.setItem('veda_assessment_results', JSON.stringify(newResults));
+      } catch (e) {
+        console.warn('Could not cache assessment results in sessionStorage:', e);
+      }
     } else {
       setSelectedQuestionId(null);
+      try {
+        sessionStorage.removeItem('veda_assessment_results');
+      } catch {}
     }
   }, []);
 
@@ -139,6 +165,9 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
   const clearResults = useCallback(() => {
     setResults(null);
     setSelectedQuestionId(null);
+    try {
+      sessionStorage.removeItem('veda_assessment_results');
+    } catch {}
   }, []);
 
   // Full Assessment Reset
@@ -146,6 +175,11 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
     clearAllDocuments();
     resetProgress();
     clearResults();
+    try {
+      sessionStorage.removeItem('veda_assessment_results');
+      sessionStorage.removeItem('veda_answer_sheet_pages');
+      sessionStorage.removeItem('veda_question_paper_pages');
+    } catch {}
   }, [clearAllDocuments, resetProgress, clearResults]);
 
   // Derived / Computed values

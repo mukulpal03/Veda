@@ -5,13 +5,10 @@ import React from 'react';
 export default function ExtractingAnimation() {
   return (
     <div className="relative mb-6 lg:mb-8 flex items-center justify-center">
-      {/* Background Soft Glow */}
-      <div className="absolute w-32 h-32 lg:w-40 lg:h-40 rounded-full bg-[#FF5623]/10 blur-2xl animate-pulse -z-10" />
+      {/* Background Soft Ambient Glow */}
+      <div className="absolute w-32 h-32 lg:w-40 lg:h-40 rounded-full bg-[#FF5623]/8 blur-2xl animate-pulse -z-10" />
 
-      {/* Outer Rotating Ring Particle */}
-      <div className="absolute w-28 h-28 lg:w-36 lg:h-36 rounded-full border border-dashed border-[#FF5623]/20 animate-[spin_12s_linear_infinite]" />
-
-      {/* Sparkle Cluster */}
+      {/* Standalone Sparkle Cluster */}
       <div className="relative flex items-center justify-center">
         
         {/* Top-Right Small Floating Sparkle */}

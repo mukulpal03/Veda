@@ -72,6 +72,12 @@ export default function ExtractingContainer() {
           progressPercentage={progressPercentage}
           currentStageIndex={currentStageIndex}
         />
+
+        {/* Free-Tier Model Notice */}
+        <div className="mt-4 px-3.5 py-1.5 rounded-full bg-orange-50/90 border border-orange-200/70 text-[11px] sm:text-xs text-orange-900/85 flex items-center justify-center gap-2 shadow-xs max-w-sm text-center">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#FF5623] animate-pulse shrink-0" />
+          <span>Processing via free-tier vision model — may take 30–60s for full handwriting OCR.</span>
+        </div>
       </div>
 
       {/* Subtle Bottom Note */}

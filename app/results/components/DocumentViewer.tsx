@@ -19,10 +19,12 @@ interface DocumentViewerProps {
 export default function DocumentViewer({
   selectedQuestionId,
   onSelectQuestion,
-  totalPages = 4,
+  totalPages: propTotalPages,
 }: DocumentViewerProps) {
   const { answerSheetPages } = useDocumentUpload();
   const { results } = useAssessmentResults();
+
+  const totalPages = propTotalPages ?? (results?.totalPages || (answerSheetPages?.length > 0 ? answerSheetPages.length : 1));
 
   const {
     currentPage,

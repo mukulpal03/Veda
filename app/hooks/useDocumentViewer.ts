@@ -12,10 +12,10 @@ export interface DocumentViewerState {
   activeHighlightedBoxIndex: number | null;
 }
 
-export function useDocumentViewer(defaultTotalPages: number = 4) {
+export function useDocumentViewer(defaultTotalPages: number = 1) {
   const { results, selectedQuestionId, selectedAnswerMapping } = useAssessmentResults();
   
-  const totalPages = results?.totalPages || defaultTotalPages;
+  const totalPages = results?.totalPages || defaultTotalPages || 1;
   const [manualPage, setManualPage] = useState<number | null>(null);
   const [prevSelectedId, setPrevSelectedId] = useState<string | null>(selectedQuestionId);
   const [zoom, setZoom] = useState<number>(100);

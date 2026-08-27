@@ -22,29 +22,29 @@ export const EXTRACTION_STAGES: ExtractionStage[] = [
     id: 1,
     label: "Parsing Question Paper structure...",
     subtext: "Detecting question numbers, sections, and mark allocations",
-    targetPercent: 20,
-    durationMs: 1200,
+    targetPercent: 22,
+    durationMs: 6000,
   },
   {
     id: 2,
     label: "Transcribing student handwritten answers...",
-    subtext: "Applying OCR and Vision to transcribe handwriting",
-    targetPercent: 50,
-    durationMs: 1500,
+    subtext: "Applying AI Vision OCR to transcribe handwriting",
+    targetPercent: 55,
+    durationMs: 18000,
   },
   {
     id: 3,
     label: "Mapping student answers to questions...",
     subtext: "Aligning handwritten blocks with corresponding question numbers",
-    targetPercent: 75,
-    durationMs: 1500,
+    targetPercent: 78,
+    durationMs: 16000,
   },
   {
     id: 4,
-    label: "Grading and calculating coordinates...",
-    subtext: "Evaluating pedagogical scores and bounding regions",
-    targetPercent: 92,
-    durationMs: 1200,
+    label: "Grading and evaluating answers...",
+    subtext: "Applying rubric criteria and scoring answers",
+    targetPercent: 94,
+    durationMs: 20000,
   },
   {
     id: 5,
@@ -61,6 +61,7 @@ export function useExtractionProcess() {
     progressStep,
     progressPercentage,
     updateProgress,
+    status,
     setStatus,
     failAssessment,
     resetProgress,
@@ -83,19 +84,43 @@ export function useExtractionProcess() {
   const startPipeline = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
-    let activeStage = 0;
 
-    // Advance UI animation smoothly up to stage 4 (92%)
+    // Smooth, continuous realistic progress ticker
+    let currentPercent = 5;
+    let elapsedMs = 0;
+    const intervalMs = 300;
+
     const progressTimer = setInterval(() => {
-      if (activeStage < 3) {
-        activeStage++;
-        setCurrentStageIndex(activeStage);
-        updateProgress(
-          EXTRACTION_STAGES[activeStage].label,
-          EXTRACTION_STAGES[activeStage].targetPercent,
-        );
+      elapsedMs += intervalMs;
+      const elapsedSec = elapsedMs / 1000;
+
+      if (elapsedSec < 6) {
+        // Stage 0: 5% -> 22%
+        currentPercent = Math.min(22, 5 + (elapsedSec / 6) * 17);
+        setCurrentStageIndex(0);
+        updateProgress(EXTRACTION_STAGES[0].label, Math.round(currentPercent));
+      } else if (elapsedSec < 24) {
+        // Stage 1: 22% -> 55%
+        currentPercent = Math.min(55, 22 + ((elapsedSec - 6) / 18) * 33);
+        setCurrentStageIndex(1);
+        updateProgress(EXTRACTION_STAGES[1].label, Math.round(currentPercent));
+      } else if (elapsedSec < 40) {
+        // Stage 2: 55% -> 78%
+        currentPercent = Math.min(78, 55 + ((elapsedSec - 24) / 16) * 23);
+        setCurrentStageIndex(2);
+        updateProgress(EXTRACTION_STAGES[2].label, Math.round(currentPercent));
+      } else if (elapsedSec < 65) {
+        // Stage 3: 78% -> 94%
+        currentPercent = Math.min(94, 78 + ((elapsedSec - 40) / 25) * 16);
+        setCurrentStageIndex(3);
+        updateProgress(EXTRACTION_STAGES[3].label, Math.round(currentPercent));
+      } else {
+        // If taking longer, keep smoothly creeping forward by 0.1% per sec (never freezes)
+        currentPercent = Math.min(98, 94 + (elapsedSec - 65) * 0.1);
+        setCurrentStageIndex(3);
+        updateProgress(EXTRACTION_STAGES[3].label, Math.round(currentPercent));
       }
-    }, 1400);
+    }, intervalMs);
 
     let isTimeoutAborted = false;
 
@@ -139,16 +164,10 @@ export function useExtractionProcess() {
           updateProgress("Extraction complete!", 100);
           setStatus("completed");
 
-          // Navigate to results
+          // Navigate cleanly to results
           setTimeout(() => {
             router.push("/results");
-            // Fallback hard navigation if soft navigation fails or hangs
-            setTimeout(() => {
-              if (window.location.pathname !== "/results") {
-                window.location.href = "/results";
-              }
-            }, 800);
-          }, 400);
+          }, 300);
           return;
         } else {
           console.warn("API returned empty questions");
@@ -196,11 +215,17 @@ export function useExtractionProcess() {
   ]);
 
   useEffect(() => {
-    if (!isStartedRef.current) {
-      isStartedRef.current = true;
-      startPipeline();
+    if (isStartedRef.current) return;
+
+    // If navigating directly to /extracting without files, bounce back to home
+    if (!questionPaperPages.length || !answerSheetPages.length) {
+      router.replace("/");
+      return;
     }
-  }, [startPipeline]);
+
+    isStartedRef.current = true;
+    startPipeline();
+  }, [questionPaperPages.length, answerSheetPages.length, router, startPipeline]);
 
   const cancelExtraction = useCallback(() => {
     isCancelledRef.current = true;

@@ -68,9 +68,7 @@ const StudentHeaderSchema = z.object({
   rollNumber: z
     .string()
     .describe("Roll/registration number if visible, else empty string"),
-  className: z
-    .string()
-    .describe("Class/grade if visible, else empty string"),
+  className: z.string().describe("Class/grade if visible, else empty string"),
   subject: z.string().describe("Subject if visible, else empty string"),
   examDate: z.string().describe("Exam date if visible, else empty string"),
 });
@@ -88,9 +86,7 @@ const ExtractionResultSchema = z.object({
 const BoundingBoxSchema = z.object({
   pageNumber: z
     .number()
-    .describe(
-      "1-based page number of the student answer sheet (e.g. 1, 2, 3)",
-    ),
+    .describe("1-based page number of the student answer sheet (e.g. 1, 2, 3)"),
   x: z
     .number()
     .describe("Left offset percentage coordinate (0 to 100) on the page"),
@@ -111,9 +107,7 @@ const BoundingBoxSchema = z.object({
 
 const QuestionSchema = z.object({
   id: z.string().describe('Unique question id, e.g. "q1", "q2", "q3"'),
-  number: z
-    .string()
-    .describe('Question label / numbering, e.g. "1", "2", "3"'),
+  number: z.string().describe('Question label / numbering, e.g. "1", "2", "3"'),
   text: z.string().describe("Full text of the question"),
   maxMarks: z.number().describe("Maximum marks allocated for this question"),
 });
@@ -225,22 +219,31 @@ export async function POST(req: NextRequest) {
     if (!openaiApiKey) {
       return NextResponse.json(
         {
-          error:
-            "OpenAI API key is missing. Set OPENAI_API_KEY in .env.local.",
+          error: "OpenAI API key is missing. Set OPENAI_API_KEY in .env.local.",
           code: "MISSING_API_KEY",
         },
         { status: 400 },
       );
     }
 
+    if (
+      (!questionPaperPages || questionPaperPages.length === 0) &&
+      (!answerSheetPages || answerSheetPages.length === 0) &&
+      (!questionPaperTexts || questionPaperTexts.length === 0)
+    ) {
+      return NextResponse.json(
+        { error: "No document pages provided for assessment." },
+        { status: 400 },
+      );
+    }
+
     const openai = new OpenAI({ apiKey: openaiApiKey });
-    const gemini = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
+    const gemini = geminiApiKey
+      ? new GoogleGenAI({ apiKey: geminiApiKey })
+      : null;
     const totalDocPages =
       answerSheetPages.length || questionPaperPages.length || 2;
 
-    // ═══════════════════════════════════════════════════════════════
-    // STAGE 1: Extract questions from question paper TEXT / IMAGES
-    // ═══════════════════════════════════════════════════════════════
     let extractedQuestions: {
       id: string;
       number: string;
@@ -253,7 +256,9 @@ export async function POST(req: NextRequest) {
       : "";
 
     if (qpTextContent.trim().length > 20) {
-      console.log(`[Stage 1] Extracting questions from PDF text (${qpTextContent.length} chars) using ${GRADING_MODEL}...`);
+      console.log(
+        `[Stage 1] Extracting questions from PDF text (${qpTextContent.length} chars) using ${GRADING_MODEL}...`,
+      );
 
       try {
         const qpResponse = await openai.responses.parse({
@@ -272,12 +277,16 @@ export async function POST(req: NextRequest) {
         });
 
         extractedQuestions = qpResponse.output_parsed?.questions || [];
-        console.log(`[Stage 1] ✅ Extracted ${extractedQuestions.length} questions (~$0.001)`);
+        console.log(
+          `[Stage 1] ✅ Extracted ${extractedQuestions.length} questions (~$0.001)`,
+        );
       } catch (err) {
         console.warn("[Stage 1] Failed to extract questions from text:", err);
       }
     } else if (questionPaperPages.length > 0) {
-      console.log(`[Stage 1] Extracting questions from ${questionPaperPages.length} Question Paper images via gpt-4o-mini...`);
+      console.log(
+        `[Stage 1] Extracting questions from ${questionPaperPages.length} Question Paper images via gpt-4o-mini...`,
+      );
       try {
         const qpImages: any[] = [];
         for (const dataUrl of questionPaperPages) {
@@ -295,12 +304,16 @@ export async function POST(req: NextRequest) {
           input: [
             {
               role: "system",
-              content: "Extract all exam questions from these images, preserving question numbers and max marks.",
+              content:
+                "Extract all exam questions from these images, preserving question numbers and max marks.",
             },
             {
               role: "user",
               content: [
-                { type: "input_text", text: "Extract questions from these question paper pages:" },
+                {
+                  type: "input_text",
+                  text: "Extract questions from these question paper pages:",
+                },
                 ...qpImages,
               ],
             },
@@ -310,17 +323,14 @@ export async function POST(req: NextRequest) {
           },
         });
         extractedQuestions = qpResponse.output_parsed?.questions || [];
-        console.log(`[Stage 1] ✅ Extracted ${extractedQuestions.length} questions from images`);
+        console.log(
+          `[Stage 1] ✅ Extracted ${extractedQuestions.length} questions from images`,
+        );
       } catch (err) {
         console.warn("[Stage 1] Failed image extraction:", err);
       }
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // STAGE 2: Handwriting extraction + bounding boxes
-    // Model: Gemini 3.5 Flash (free tier — best handwriting vision)
-    // Non-LLM Text Fallback: If Gemini fails, use pdfjs text layer
-    // ═══════════════════════════════════════════════════════════════
     let extractionResult: { studentHeader: any; blocks: any[] } | null = null;
     let isVisionFallback = false;
     let warningMessage = "";
@@ -424,14 +434,14 @@ Page numbers are 1-indexed based on image order.`,
       }
     }
 
-    // --- Fallback attempt: OpenAI gpt-4o-mini vision (Text-only, no bounding boxes, ~$0.001) ---
+    // --- Fallback attempt: OpenAI vision fallback ---
     if (!extractionResult || !extractionResult.blocks?.length) {
       console.log(
-        `[Stage 2] ⚡ Running gpt-4o-mini vision fallback for text extraction (no coordinates)...`,
+        `[Stage 2] ⚡ Running OpenAI vision fallback for text & bounding box extraction...`,
       );
       isVisionFallback = true;
       warningMessage =
-        "Our primary vision model is temporarily down, so visual bounding box highlighting is unavailable for this assessment.";
+        "The Gemini model hit an error/rate limit. A lighter fallback model was used, so the visual highlighting won't be as accurate as Gemini. Please try again after some time.";
 
       const answerImageContents: any[] = [];
       let pageNum = 1;
@@ -453,24 +463,25 @@ Page numbers are 1-indexed based on image order.`,
 
       try {
         const fallbackResponse = await openai.responses.parse({
-          model: "gpt-5-nano", // gpt-4o-mini
+          model: "gpt-5-mini",
           input: [
             {
               role: "system",
-              content: `You are a precision handwriting transcription engine. Your ONLY job is to:
+              content: `You are a precision handwriting extraction and spatial locating engine. Your ONLY job is to:
 1. Scan EVERY page thoroughly from top to bottom and extract ALL handwritten answers across all sections and pages.
 2. Transcribe each block verbatim (preserve original text, spelling, and grammar).
-3. Extract student header info if visible.
-4. Identify and attach the corresponding question number for each block (e.g., "1", "2a", "Q3", etc.).
+3. Provide accurate bounding box coordinates (percentage coordinates 0-100: pageNumber, x, y, width, height) enclosing each handwritten answer block on the page so it can be highlighted in green on the document canvas.
+4. Extract student header info if visible (name, roll number, class, subject, date).
+5. Identify and attach the corresponding question number for each block (e.g., "1", "2a", "Q3", etc.).
 
-CRITICAL: Ensure complete coverage of every page from top header to bottom margin. Do not truncate or omit answers near the bottom of any page. Leave boundingBoxes as empty arrays [].`,
+CRITICAL: Provide precise bounding box coordinates (percentage 0 to 100) for every detected handwritten block so visual boundary highlighting is active.`,
             },
             {
               role: "user",
               content: [
                 {
                   type: "input_text",
-                  text: "Transcribe all handwritten text from these answer sheet pages:",
+                  text: "Transcribe all handwritten text and provide bounding box coordinates from these answer sheet pages:",
                 },
                 ...answerImageContents,
               ],
@@ -483,12 +494,16 @@ CRITICAL: Ensure complete coverage of every page from top header to bottom margi
 
         extractionResult = fallbackResponse.output_parsed;
         if (extractionResult?.blocks?.length) {
+          const hasBoxes = extractionResult.blocks.some((b: any) => b.boundingBoxes && b.boundingBoxes.length > 0);
           console.log(
-            `[Stage 2] ✅ gpt-4o-mini fallback extracted ${extractionResult.blocks.length} handwritten blocks (~$0.001)`,
+            `[Stage 2] ✅ OpenAI fallback extracted ${extractionResult.blocks.length} handwritten blocks (bounding boxes: ${hasBoxes ? 'YES' : 'NO'})`,
           );
         }
       } catch (oaiErr: any) {
-        console.error("[Stage 2] gpt-4o-mini fallback vision extraction failed:", oaiErr);
+        console.error(
+          "[Stage 2] OpenAI fallback vision extraction failed:",
+          oaiErr,
+        );
       }
     }
 
@@ -504,7 +519,10 @@ CRITICAL: Ensure complete coverage of every page from top header to bottom margi
       const fallbackBlocks: any[] = [];
       let bIdx = 1;
 
-      if (Array.isArray(answerSheetTexts) && answerSheetTexts.some((t) => t.trim())) {
+      if (
+        Array.isArray(answerSheetTexts) &&
+        answerSheetTexts.some((t) => t.trim())
+      ) {
         answerSheetTexts.forEach((pageText) => {
           if (pageText && pageText.trim()) {
             fallbackBlocks.push({
@@ -529,11 +547,6 @@ CRITICAL: Ensure complete coverage of every page from top header to bottom margi
       };
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // STAGE 3: Mapping + Grading + Feedback
-    // Model: gpt-4o-mini (text-only, very cheap)
-    // Input: questions + extracted blocks (pure text, no images)
-    // ═══════════════════════════════════════════════════════════════
     const studentHeader = extractionResult?.studentHeader || {};
     const extractedBlocks = extractionResult?.blocks || [];
 
