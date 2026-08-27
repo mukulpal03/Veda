@@ -19,11 +19,18 @@ export default function QuestionMappingList({
 }: QuestionMappingListProps) {
   const [expandAll, setExpandAll] = useState<boolean>(false);
 
-  // Map answers by questionId for fast lookup
+  // Map answers by questionId with flexible key matching (q1, 1, Q1)
   const answerMap = useMemo(() => {
     const map = new Map<string, AnswerMapping>();
     answers.forEach((ans) => {
       map.set(ans.questionId, ans);
+      map.set(ans.questionId.toLowerCase(), ans);
+      map.set(ans.questionId.toUpperCase(), ans);
+      const digits = ans.questionId.replace(/\D/g, '');
+      if (digits) {
+        map.set(`q${digits}`, ans);
+        map.set(digits, ans);
+      }
     });
     return map;
   }, [answers]);

@@ -21,6 +21,13 @@ export default function QuestionMappingCard({
 }: QuestionMappingCardProps) {
   const [userToggled, setUserToggled] = useState<boolean | null>(null);
   const [prevSelected, setPrevSelected] = useState<boolean>(isSelected);
+  const [prevExpandedControlled, setPrevExpandedControlled] = useState<boolean | undefined>(isExpandedControlled);
+
+  // Sync with expand all button
+  if (isExpandedControlled !== prevExpandedControlled) {
+    setPrevExpandedControlled(isExpandedControlled);
+    setUserToggled(isExpandedControlled ?? null);
+  }
 
   // Reset toggle override when selection state changes
   if (isSelected !== prevSelected) {
@@ -28,7 +35,7 @@ export default function QuestionMappingCard({
     setUserToggled(null);
   }
 
-  const isExpanded = isExpandedControlled ?? userToggled ?? isSelected;
+  const isExpanded = userToggled ?? isSelected;
 
   const marksAwarded = answer?.marksAwarded ?? 0;
   const maxMarks = answer?.maxMarks ?? question.maxMarks ?? 2;
@@ -58,15 +65,17 @@ export default function QuestionMappingCard({
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setUserToggled(!(userToggled ?? isSelected));
-    if (!isSelected) {
+    setUserToggled(!isExpanded);
+    if (!isSelected && !isExpanded) {
       onSelect();
     }
   };
 
   const handleClickCard = () => {
     onSelect();
-    setUserToggled(true);
+    if (!isSelected) {
+      setUserToggled(true);
+    }
   };
 
   // Check if number contains subpart like "11 a." or "11 b."
@@ -125,11 +134,24 @@ export default function QuestionMappingCard({
         </div>
       </div>
 
-      {/* Expanded AI Feedback Section */}
+      {/* Expanded Student Answer & AI Feedback Section */}
       {isExpanded && answer && (
-        <div className="mt-3.5 pt-1">
-          <div className="bg-[#F9F9F9] border border-gray-100 rounded-xl p-3.5">
-            <span className="font-bold text-xs text-[#1E1E1E] block mb-1">
+        <div className="mt-3.5 pt-1 space-y-2.5">
+          {/* Student Transcribed Answer */}
+          {answer.studentAnswerText && (
+            <div className="bg-[#F8FAFC] border border-slate-200/80 rounded-xl p-3">
+              <span className="font-bold text-[11px] uppercase tracking-wider text-slate-500 block mb-1">
+                Student&apos;s Answer
+              </span>
+              <p className="text-xs text-slate-800 leading-relaxed font-sans">
+                {answer.studentAnswerText}
+              </p>
+            </div>
+          )}
+
+          {/* AI Pedagogical Feedback */}
+          <div className="bg-[#FFF8F5] border border-[#FFE8DF] rounded-xl p-3">
+            <span className="font-bold text-[11px] uppercase tracking-wider text-[#FF5623] block mb-1">
               AI Feedback
             </span>
             <p className="text-xs text-[#525252] leading-relaxed">

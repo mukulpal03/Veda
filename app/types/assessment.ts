@@ -93,6 +93,8 @@ export interface DocumentUploadState {
   answerSheetFile: File | null;
   questionPaperPages: string[];
   answerSheetPages: string[];
+  questionPaperTexts?: string[];
+  answerSheetTexts?: string[];
 }
 
 export interface DocumentUploadActions {

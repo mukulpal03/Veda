@@ -34,6 +34,7 @@ DESIGN_SPECS.md
 CLAUDE.md
 .vscode
 mcp.json
+Assignment.md
 
 # env files (can opt-in for committing if needed)
 .env*

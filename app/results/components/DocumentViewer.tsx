@@ -8,7 +8,7 @@ import {
   Plus 
 } from 'lucide-react';
 import DocumentPageCanvas from './DocumentPageCanvas';
-import { useDocumentViewer } from '../../hooks';
+import { useDocumentViewer, useDocumentUpload, useAssessmentResults } from '../../hooks';
 
 interface DocumentViewerProps {
   selectedQuestionId: string | null;
@@ -21,6 +21,9 @@ export default function DocumentViewer({
   onSelectQuestion,
   totalPages = 4,
 }: DocumentViewerProps) {
+  const { answerSheetPages } = useDocumentUpload();
+  const { results } = useAssessmentResults();
+
   const {
     currentPage,
     zoom,
@@ -98,10 +101,14 @@ export default function DocumentViewer({
       {/* Main Canvas Document Scroll Area */}
       <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center p-3 lg:p-4 relative">
         <DocumentPageCanvas
+          currentPage={currentPage}
           zoom={zoom}
           selectedQuestionId={selectedQuestionId}
           showBoundingBoxes={showBoundingBoxes}
           onSelectQuestion={onSelectQuestion}
+          pageImageUrl={answerSheetPages?.[currentPage - 1] || null}
+          questions={results?.questions || []}
+          answers={results?.answers || []}
         />
       </div>
 

@@ -56,7 +56,7 @@ export default function ResultsHeader() {
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="font-[family-name:var(--font-bricolage)] font-bold text-lg lg:text-xl text-[#1E1E1E] truncate">
-              {student?.subject || 'Physics Mid-Term Assessment'}
+              {student?.subject || 'Exam Assessment Evaluation'}
             </h1>
             <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-2.5 py-0.5 rounded-full">
               <CheckCircle2 size={12} className="text-emerald-600" />
@@ -68,14 +68,22 @@ export default function ResultsHeader() {
             {student && (
               <>
                 <span className="font-semibold text-gray-800">{student.name}</span>
-                <span>•</span>
-                <span>Roll No: {student.rollNumber}</span>
-                <span>•</span>
-                <span>{student.className}</span>
+                {student.rollNumber && (
+                  <>
+                    <span>•</span>
+                    <span>Roll No: {student.rollNumber}</span>
+                  </>
+                )}
+                {student.className && (
+                  <>
+                    <span>•</span>
+                    <span>{student.className}</span>
+                  </>
+                )}
                 <span>•</span>
               </>
             )}
-            <span>4 Questions Mapped</span>
+            <span>{results?.questions?.length || 0} Questions Mapped</span>
           </div>
         </div>
       </div>

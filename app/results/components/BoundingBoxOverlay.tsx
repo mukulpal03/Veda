@@ -47,15 +47,15 @@ export default function BoundingBoxOverlay({
       className={`absolute rounded-xl transition-all duration-200 cursor-pointer select-none z-20 ${
         isSelected
           ? 'border-2 border-[#10B981] bg-[#10B981]/8 ring-2 ring-[#10B981]/25'
-          : 'border border-[#10B981]/60 bg-[#10B981]/4 hover:border-[#10B981] hover:bg-[#10B981]/10'
+          : 'border border-transparent hover:border-gray-400/50 hover:bg-gray-400/5'
       }`}
     >
-      {/* Green Floating Tag Badge on top-left */}
+      {/* Floating Tag Badge on top-left */}
       <div
-        className={`absolute -top-3.5 left-2 flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold shadow-xs transition-transform ${
+        className={`absolute -top-3.5 left-2 flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold shadow-xs transition-all ${
           isSelected
-            ? 'bg-[#10B981] text-white scale-105'
-            : 'bg-[#10B981] text-white'
+            ? 'bg-[#10B981] text-white scale-105 z-30 opacity-100'
+            : 'bg-gray-400/80 text-white opacity-40 hover:opacity-100'
         }`}
       >
         <span>{qLabel}</span>

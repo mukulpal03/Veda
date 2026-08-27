@@ -16,8 +16,8 @@ export default function ResultsContainer() {
 
   const { questions, answers, totalPages = 4 } = results;
 
-  // Initialize selected question to 'q2' if none selected so it matches the screenshot preview
-  const activeQuestionId = selectedQuestionId || 'q2';
+  // Initialize selected question to first question in results if none selected
+  const activeQuestionId = selectedQuestionId || questions[0]?.id || 'q1';
 
   return (
     <div className="w-full flex-1 flex flex-col min-h-0 overflow-hidden bg-white rounded-[24px] lg:rounded-[32px] p-3 sm:p-4 lg:p-5 shadow-[0px_4px_30px_rgba(0,0,0,0.03)] border border-white/60">

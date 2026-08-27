@@ -31,6 +31,8 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
   const [answerSheetFile, setAnswerSheetFile] = useState<File | null>(null);
   const [questionPaperPages, setQuestionPaperPages] = useState<string[]>([]);
   const [answerSheetPages, setAnswerSheetPages] = useState<string[]>([]);
+  const [questionPaperTexts, setQuestionPaperTexts] = useState<string[]>([]);
+  const [answerSheetTexts, setAnswerSheetTexts] = useState<string[]>([]);
 
   // 2. Assessment Progress Domain State
   const [status, setStatus] = useState<AssessmentStatus>('idle');
@@ -42,15 +44,51 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
   const [results, setResults] = useState<AssessmentResult | null>(null);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
 
-  // Document Upload Actions
+  // Document Upload Actions with Async Page Rendering & Text Extraction
+  const handleSetQuestionPaperFile = useCallback(async (file: File | null) => {
+    setQuestionPaperFile(file);
+    if (file && typeof window !== 'undefined') {
+      try {
+        const { processUploadedDocumentWithText } = await import('../lib/pdfRenderer');
+        const docResult = await processUploadedDocumentWithText(file);
+        setQuestionPaperPages(docResult.pageImageUrls);
+        setQuestionPaperTexts(docResult.pageTexts);
+      } catch (err) {
+        console.warn('Could not extract question paper pages preview:', err);
+      }
+    } else {
+      setQuestionPaperPages([]);
+      setQuestionPaperTexts([]);
+    }
+  }, []);
+
+  const handleSetAnswerSheetFile = useCallback(async (file: File | null) => {
+    setAnswerSheetFile(file);
+    if (file && typeof window !== 'undefined') {
+      try {
+        const { processUploadedDocumentWithText } = await import('../lib/pdfRenderer');
+        const docResult = await processUploadedDocumentWithText(file);
+        setAnswerSheetPages(docResult.pageImageUrls);
+        setAnswerSheetTexts(docResult.pageTexts);
+      } catch (err) {
+        console.warn('Could not extract answer sheet pages preview:', err);
+      }
+    } else {
+      setAnswerSheetPages([]);
+      setAnswerSheetTexts([]);
+    }
+  }, []);
+
   const removeQuestionPaper = useCallback(() => {
     setQuestionPaperFile(null);
     setQuestionPaperPages([]);
+    setQuestionPaperTexts([]);
   }, []);
 
   const removeAnswerSheet = useCallback(() => {
     setAnswerSheetFile(null);
     setAnswerSheetPages([]);
+    setAnswerSheetTexts([]);
   }, []);
 
   const clearAllDocuments = useCallback(() => {
@@ -130,22 +168,28 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
   // Memoized Domain Context Values
   const documentUploadValue = useMemo<DocumentUploadContextType>(() => ({
     questionPaperFile,
-    setQuestionPaperFile,
+    setQuestionPaperFile: handleSetQuestionPaperFile,
     answerSheetFile,
-    setAnswerSheetFile,
+    setAnswerSheetFile: handleSetAnswerSheetFile,
     questionPaperPages,
     setQuestionPaperPages,
     answerSheetPages,
     setAnswerSheetPages,
+    questionPaperTexts,
+    answerSheetTexts,
     removeQuestionPaper,
     removeAnswerSheet,
     clearAllDocuments,
     isUploadReady,
   }), [
     questionPaperFile,
+    handleSetQuestionPaperFile,
     answerSheetFile,
+    handleSetAnswerSheetFile,
     questionPaperPages,
     answerSheetPages,
+    questionPaperTexts,
+    answerSheetTexts,
     removeQuestionPaper,
     removeAnswerSheet,
     clearAllDocuments,
